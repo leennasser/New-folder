@@ -1,37 +1,32 @@
 import random
 import math
 from collections import defaultdict
-import pandas as pd
-import matplotlib.pyplot as plt
+import pandas as pand
+import matplotlib.pyplot as plot
 
 
-# =========================
-# 1. Configuration
-# =========================
-
+# 1. Define global weights to use in the project
+ 
 DATASET_FILE = "ga_exam_timetable_dataset.xlsx"
-RANDOM_SEED = 42
+RANDOM_SEED = 7
 
-POPULATION_SIZE = 120
-GENERATIONS = 400
+POPULATION_SIZE = 300
+GENERATIONS = 1500
 CROSSOVER_RATE = 0.85
-MUTATION_RATE = 0.08
-ELITE_COUNT = 2
+MUTATION_RATE = 0.10
+ELITE_COUNT = 3
 
 # Penalty weights: higher means more important
 SAME_SLOT_CONFLICT_WEIGHT = 1000       # hard: same student has two exams at same time
 MORE_THAN_TWO_PER_DAY_WEIGHT = 800     # hard: student has more than 2 exams/day
 FOUR_IN_TWO_DAYS_WEIGHT = 500          # hard/strong: 4 exams in two consecutive days
-TWO_IN_SAME_DAY_WEIGHT = 50            # soft: preferably avoid two exams in same day
-EXTRA_DAY_WEIGHT = 100                 # soft: minimize number of exam days
+TWO_IN_SAME_DAY_WEIGHT = 100           # soft: preferably avoid two exams in same day
+EXTRA_DAY_WEIGHT = 300                 # soft: minimize number of exam days
 SLOT_OVERLOAD_WEIGHT = 300             # hard-ish: more than 3 courses in same day/slot is not used here, slots are fixed
 PREFERRED_MAX_USED_DAYS = 5
 
 
-# =========================
-# 2. Loading and preprocessing
-# =========================
-
+ # 2. Loading and preprocessing exams information
 class ExamData:
     def __init__(self, dataset_file):
         self.dataset_file = dataset_file
@@ -47,9 +42,9 @@ class ExamData:
         self.build_conflict_matrix()
 
     def load_dataset(self):
-        courses_df = pd.read_excel(self.dataset_file, sheet_name="Course_Catalog")
-        slots_df = pd.read_excel(self.dataset_file, sheet_name="Exam_Slots")
-        students_df = pd.read_excel(self.dataset_file, sheet_name="Student_Courses")
+        courses_df = pand.read_excel(self.dataset_file, sheet_name="Course_Catalog")
+        slots_df = pand.read_excel(self.dataset_file, sheet_name="Exam_Slots")
+        students_df = pand.read_excel(self.dataset_file, sheet_name="Student_Courses")
 
         self.courses = list(courses_df["Course_Code"].dropna().astype(str))
         self.course_index = {course: i for i, course in enumerate(self.courses)}
@@ -63,7 +58,7 @@ class ExamData:
             student_id = str(row["Student_ID"])
             taken = []
             for col in ["Course_1", "Course_2", "Course_3", "Course_4", "Course_5", "Course_6", "Course_7"]:
-                if col in students_df.columns and pd.notna(row[col]):
+                if col in students_df.columns and pand.notna(row[col]):
                     course = str(row[col])
                     if course in self.course_index:
                         taken.append(course)
@@ -82,9 +77,7 @@ class ExamData:
                     self.conflict_matrix[b][a] += 1
 
 
-# =========================
 # 3. Chromosome and fitness
-# =========================
 
 class GeneticExamScheduler:
     def __init__(self, data):
@@ -120,7 +113,7 @@ class GeneticExamScheduler:
                     penalty += SAME_SLOT_CONFLICT_WEIGHT * common_students
                     details["same_slot_conflicts"] += common_students
 
-        # Student-based daily constraints.
+        # Students daily constraints.
         for student_id, courses in self.data.student_courses.items():
             exams_per_day = defaultdict(int)
 
@@ -162,9 +155,8 @@ class GeneticExamScheduler:
         return 1.0 / (1.0 + penalty)
 
 
-# =========================
+
 # 4. GA operators
-# =========================
 
 def initialize_population(scheduler, size):
     return [scheduler.create_random_chromosome() for _ in range(size)]
@@ -228,9 +220,7 @@ def mutate_random_reset(chromosome, num_slots, mutation_rate):
     return child
 
 
-# =========================
 # 5. GA main loop
-# =========================
 
 def run_ga(dataset_file=DATASET_FILE,
            population_size=POPULATION_SIZE,
@@ -264,6 +254,10 @@ def run_ga(dataset_file=DATASET_FILE,
             best_penalty = current_best_penalty
             best_chromosome = current_best_chromosome[:]
             best_details = dict(current_best_details)
+        
+        if best_penalty == 0:
+            print("Perfect solution found.")
+            break
 
         history.append({
             "generation": gen,
@@ -279,7 +273,7 @@ def run_ga(dataset_file=DATASET_FILE,
         if gen == generations:
             break
 
-        # Elitism: keep the best chromosomes unchanged.
+        # keep the best chromosomes unchanged.
         new_population = [item[2][:] for item in evaluated[:elite_count]]
 
         fitness_values = [item[1] for item in evaluated]
@@ -311,13 +305,11 @@ def run_ga(dataset_file=DATASET_FILE,
     return scheduler, best_chromosome, best_penalty, best_details, history, final_schedule
 
 
-# =========================
 # 6. Saving output files
-# =========================
 
 def save_results(scheduler, best_chromosome, best_penalty, best_details, history, final_schedule):
-    schedule_df = pd.DataFrame(final_schedule)
-    history_df = pd.DataFrame(history)
+    schedule_df = pand.DataFrame(final_schedule)
+    history_df = pand.DataFrame(history)
 
     schedule_df.to_csv("best_exam_schedule.csv", index=False)
     history_df.to_csv("convergence_history.csv", index=False)
@@ -333,23 +325,23 @@ def save_results(scheduler, best_chromosome, best_penalty, best_details, history
             f.write(f"{row['Course_Code']} -> {row['Assigned_Slot_ID']} "
                     f"(Day {row['Exam_Day']}, Slot {row['Slot_Number']}, {row['Time']})\n")
 
-    if plt is not None:
-        plt.figure(figsize=(8, 5))
-        plt.plot(history_df["generation"], history_df["best_penalty"], label="Best penalty")
-        plt.plot(history_df["generation"], history_df["average_penalty"], label="Average penalty")
-        plt.xlabel("Generation")
-        plt.ylabel("Penalty")
-        plt.title("GA Convergence Rate")
-        plt.legend()
-        plt.grid(True)
-        plt.tight_layout()
-        plt.savefig("convergence_plot.png", dpi=150)
+    if plot is not None:
+        plot.figure(figsize=(8, 5))
+        plot.plot(history_df["generation"], history_df["best_penalty"], label="Best penalty")
+        plot.plot(history_df["generation"], history_df["average_penalty"], label="Average penalty")
+        plot.xlabel("Generation")
+        plot.ylabel("Penalty")
+        plot.title("GA Convergence Rate")
+        plot.legend()
+        plot.grid(True)
+        plot.tight_layout()
+        plot.savefig("convergence_plot.png", dpi=150)
 
 
 def test_sample_bad_schedule(dataset_file=DATASET_FILE):
     data = ExamData(dataset_file)
     scheduler = GeneticExamScheduler(data)
-    bad_df = pd.read_excel(dataset_file, sheet_name="Sample_Bad_Schedule")
+    bad_df = pand.read_excel(dataset_file, sheet_name="Sample_Bad_Schedule")
 
     slot_to_index = {slot_id: i for i, slot_id in enumerate(data.slot_ids)}
     chromosome = [0] * len(data.courses)
