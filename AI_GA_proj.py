@@ -161,7 +161,7 @@ class GeneticExamScheduler:
 def initialize_population(scheduler, size):
     return [scheduler.create_random_chromosome() for _ in range(size)]
 
-
+# First step: selection
 def stochastic_remainder_selection(population, fitness_values):
     pop_size = len(population)
     total_fitness = sum(fitness_values)
@@ -195,7 +195,7 @@ def stochastic_remainder_selection(population, fitness_values):
 
     return selected[:pop_size]
 
-
+# Second step: crossover
 def two_point_crossover(parent1, parent2):
     if len(parent1) < 3:
         return parent1[:], parent2[:]
@@ -207,7 +207,7 @@ def two_point_crossover(parent1, parent2):
     child2 = parent2[:point1] + parent1[point1:point2] + parent2[point2:]
     return child1, child2
 
-
+# Third step:mutation
 def mutate_random_reset(chromosome, num_slots, mutation_rate):
     child = chromosome[:]
     for i in range(len(child)):
@@ -220,7 +220,7 @@ def mutate_random_reset(chromosome, num_slots, mutation_rate):
     return child
 
 
-# 5. GA main loop
+# 5. GA main loop implementation
 
 def run_ga(dataset_file=DATASET_FILE,
            population_size=POPULATION_SIZE,
@@ -230,8 +230,26 @@ def run_ga(dataset_file=DATASET_FILE,
            elite_count=ELITE_COUNT,
            seed=RANDOM_SEED):
 
-    random.seed(seed)
+# Genetic algorithm execution has steps: 
+
+    random.seed(seed)  # initialize random seed to ensure reproducibility for parameters tunning analysis.
+
+    # First step of GA: Initailization
+
     data = ExamData(dataset_file)
+    print("\nConflict Matrix:")
+    print("       ", end="")
+
+    for course in data.courses:
+        print(f"{course:10s}", end="")
+    print()
+
+    for i, course in enumerate(data.courses):
+        print(f"{course:10s}", end="")
+        for value in data.conflict_matrix[i]:
+            print(f"{value:10d}", end="")
+        print()
+        
     scheduler = GeneticExamScheduler(data)
     population = initialize_population(scheduler, population_size)
 
@@ -241,6 +259,7 @@ def run_ga(dataset_file=DATASET_FILE,
     history = []
 
     for gen in range(generations + 1):
+        # step two of GA: evaluation
         evaluated = []
         for chromosome in population:
             penalty, details = scheduler.objective_penalty(chromosome)
@@ -273,6 +292,7 @@ def run_ga(dataset_file=DATASET_FILE,
         if gen == generations:
             break
 
+        # step three of GA: Selection phase 
         # keep the best chromosomes unchanged.
         new_population = [item[2][:] for item in evaluated[:elite_count]]
 
@@ -281,6 +301,7 @@ def run_ga(dataset_file=DATASET_FILE,
         mating_pool = stochastic_remainder_selection(sorted_population, fitness_values)
         random.shuffle(mating_pool)
 
+        # step four of GA: recombine phase
         index = 0
         while len(new_population) < population_size:
             parent1 = mating_pool[index % len(mating_pool)]
@@ -301,11 +322,12 @@ def run_ga(dataset_file=DATASET_FILE,
 
         population = new_population
 
+    # step five, final step of GA: decode the best chromosomes found.
     final_schedule = scheduler.decode(best_chromosome)
     return scheduler, best_chromosome, best_penalty, best_details, history, final_schedule
 
 
-# 6. Saving output files
+# 6. Saving results in output files
 
 def save_results(scheduler, best_chromosome, best_penalty, best_details, history, final_schedule):
     schedule_df = pand.DataFrame(final_schedule)
@@ -338,6 +360,7 @@ def save_results(scheduler, best_chromosome, best_penalty, best_details, history
         plot.savefig("convergence_plot.png", dpi=150)
 
 
+#testing the bad_sample sheet on the fitness function
 def test_sample_bad_schedule(dataset_file=DATASET_FILE):
     data = ExamData(dataset_file)
     scheduler = GeneticExamScheduler(data)
