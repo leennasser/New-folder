@@ -222,13 +222,8 @@ def mutate_random_reset(chromosome, num_slots, mutation_rate):
 
 # 5. GA main loop implementation
 
-def run_ga(dataset_file=DATASET_FILE,
-           population_size=POPULATION_SIZE,
-           generations=GENERATIONS,
-           crossover_rate=CROSSOVER_RATE,
-           mutation_rate=MUTATION_RATE,
-           elite_count=ELITE_COUNT,
-           seed=RANDOM_SEED):
+def run_ga(dataset_file=DATASET_FILE, population_size=POPULATION_SIZE, generations=GENERATIONS, crossover_rate=CROSSOVER_RATE, mutation_rate=MUTATION_RATE,
+ elite_count=ELITE_COUNT, seed=RANDOM_SEED):
 
 # Genetic algorithm execution has steps: 
 
@@ -353,7 +348,7 @@ def save_results(scheduler, best_chromosome, best_penalty, best_details, history
         plot.plot(history_df["generation"], history_df["average_penalty"], label="Average penalty")
         plot.xlabel("Generation")
         plot.ylabel("Penalty")
-        plot.title("GA Convergence Rate")
+        plot.title("Convergence rate of genetic algorithm")
         plot.legend()
         plot.grid(True)
         plot.tight_layout()
