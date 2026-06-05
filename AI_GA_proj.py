@@ -8,20 +8,20 @@ import matplotlib.pyplot as plot
 # 1. Define global weights to use in the project
  
 DATASET_FILE = "ga_exam_timetable_dataset.xlsx"
-RANDOM_SEED = 7
+RANDOM_SEED = 42
 
-POPULATION_SIZE = 300
-GENERATIONS = 1500
+POPULATION_SIZE = 120
+GENERATIONS = 400
 CROSSOVER_RATE = 0.85
-MUTATION_RATE = 0.10
-ELITE_COUNT = 3
+MUTATION_RATE = 0.08
+ELITE_COUNT = 2
 
 # Penalty weights: higher means more important
 SAME_SLOT_CONFLICT_WEIGHT = 1000       # hard: same student has two exams at same time
 MORE_THAN_TWO_PER_DAY_WEIGHT = 800     # hard: student has more than 2 exams/day
 FOUR_IN_TWO_DAYS_WEIGHT = 500          # hard/strong: 4 exams in two consecutive days
-TWO_IN_SAME_DAY_WEIGHT = 100           # soft: preferably avoid two exams in same day
-EXTRA_DAY_WEIGHT = 300                 # soft: minimize number of exam days
+TWO_IN_SAME_DAY_WEIGHT = 50           # soft: preferably avoid two exams in same day
+EXTRA_DAY_WEIGHT = 100                 # soft: minimize number of exam days
 SLOT_OVERLOAD_WEIGHT = 300             # hard-ish: more than 3 courses in same day/slot is not used here, slots are fixed
 PREFERRED_MAX_USED_DAYS = 5
 
